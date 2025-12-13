@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geografijos Iššūkis</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; height: 100vh; }
+        #header { background-color: #2c3e50; color: white; padding: 15px; text-align: center; display: flex; justify-content: space-between; align-items: center; }
+        #task-box { background-color: #ecf0f1; padding: 15px; text-align: center; font-size: 1.2em; border-bottom: 2px solid #bdc3c7; }
+        #map { flex-grow: 1; width: 100%; cursor: crosshair; }
+        .target-name { font-weight: bold; color: #e74c3c; }
+        .btn { background-color: #27ae60; color: white; border: none; padding: 10px 20px; cursor: pointer; font-size: 1em; border-radius: 5px; margin: 5px; }
+        .btn:hover { background-color: #2ecc71; }
+        .btn-secondary { background-color: #3498db; }
+        .btn-secondary:hover { background-color: #5dade2; }
+        .info-panel { font-size: 0.9em; }
+        #feedback { margin-top: 10px; font-weight: bold; min-height: 24px; }
+
+        /* Stiliai teisingam/neteisingam atsakymui */
+        .correct { color: #27ae60; }
+        .incorrect { color: #c0392b; }
+        .partial { color: #f39c12; }
+
+        /* Pradinis ekranas */
+        #start-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(44, 62, 80, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; color: white; overflow-y: auto; padding: 20px; }
+        #start-screen h1 { font-size: 2.5em; margin-bottom: 20px; }
+        #start-screen h2 { font-size: 1.5em; margin-bottom: 15px; margin-top: 30px; }
+        #start-screen p { font-size: 1.2em; margin-bottom: 20px; }
+        .exam-options { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; max-width: 600px; }
+        .exam-btn { background-color: #e74c3c; padding: 15px 30px; font-size: 1.1em; }
+        .exam-btn:hover { background-color: #c0392b; }
+
+        /* Objektų tipų pasirinkimas */
+        .type-selection { max-width: 700px; margin: 20px auto; }
+        .type-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .type-checkbox { display: none; }
+        .type-label { padding: 12px; background-color: #34495e; border: 2px solid #34495e; border-radius: 5px; cursor: pointer; text-align: center; transition: all 0.3s; }
+        .type-label:hover { background-color: #4a5f7f; }
+        .type-checkbox:checked + .type-label { background-color: #27ae60; border-color: #27ae60; }
+        .select-buttons { display: flex; gap: 10px; justify-content: center; margin-bottom: 15px; }
+        .select-btn { background-color: #7f8c8d; padding: 8px 16px; font-size: 0.9em; }
+        .select-btn:hover { background-color: #95a5a6; }
+
+        /* Rezultatų lentelė */
+        #results-table { max-width: 600px; margin: 20px auto; background: white; color: #2c3e50; padding: 20px; border-radius: 10px; max-height: 60vh; overflow-y: auto; }
+        #results-table table { width: 100%; border-collapse: collapse; }
+        #results-table th, #results-table td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+        #results-table th { background-color: #34495e; color: white; }
+        .grade-excellent { color: #27ae60; font-weight: bold; }
+        .grade-good { color: #f39c12; font-weight: bold; }
+        .grade-fail { color: #c0392b; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="start-screen">
+    <h1>🌍 Geografijos Egzaminas</h1>
+
+    <div class="type-selection">
+        <h2>Pasirinkite ką mokytis:</h2>
+        <div class="select-buttons">
+            <button class="btn select-btn" onclick="selectAllTypes()">✓ Visi</button>
+            <button class="btn select-btn" onclick="deselectAllTypes()">✗ Nieko</button>
+        </div>
+        <div class="type-grid">
+            <div>
+                <input type="checkbox" id="type-sala" class="type-checkbox" checked>
+                <label for="type-sala" class="type-label">🏝️ Salos</label>
+            </div>
+            <div>
+                <input type="checkbox" id="type-salynas" class="type-checkbox" checked>
+                <label for="type-salynas" class="type-label">🏝️ Salynai</label>
+            </div>
+            <div>
+                <input type="checkbox" id="type-pusiasalis" class="type-checkbox" checked>
+                <label for="type-pusiasalis" class="type-label">🗺️ Pusiasaliai</label>
+            </div>
+            <div>
+                <input type="checkbox" id="type-jura" class="type-checkbox" checked>
+                <label for="type-jura" class="type-label">🌊 Jūros</label>
+            </div>
+            <div>
+                <input type="checkbox" id="type-ilanka" class="type-checkbox" checked>
+                <label for="type-ilanka" class="type-label">🌊 Įlankos</label>
+            </div>
+            <div>
+                <input type="checkbox" id="type-sasiauris" class="type-checkbox" checked>
+                <label for="type-sasiauris" class="type-label">〰️ Sąsiauriai</label>
+            </div>
+            <div>
+                <input type="checkbox" id="type-kanalas" class="type-checkbox" checked>
+                <label for="type-kanalas" class="type-label">🚢 Kanalai</label>
+            </div>
+        </div>
+    </div>
+
+    <h2>Pasirinkite egzamino ilgį:</h2>
+    <div class="exam-options">
+        <button class="btn exam-btn" onclick="startExam(10)">10 klausimų</button>
+        <button class="btn exam-btn" onclick="startExam(20)">20 klausimų</button>
+        <button class="btn exam-btn" onclick="startExam(30)">30 klausimų</button>
+        <button class="btn exam-btn" onclick="startExam('all')">Visi pasirinkti</button>
+    </div>
+</div>
+
+<div id="header">
+    <div>Taškai: <span id="score">0</span> / <span id="max-score">0</span></div>
+    <div class="info-panel">Klausimas <span id="question-num">1</span> / <span id="total-questions">10</span></div>
+    <div>Vidurkis: <span id="avg-score">0</span>%</div>
+</div>
+
+<div id="task-box">
+    <div id="question-text">Kraunama...</div>
+    <div id="feedback"></div>
+    <button id="next-btn" class="btn" onclick="nextLevel()" style="display: none;">Kitas klausimas &rarr;</button>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // 1. Žemėlapio inicijavimas
+    // Centruojame ties Europa/Afrika pradžiai, zoom lygis 3
+    const map = L.map('map').setView([20, 0], 2);
+
+    // Naudojame žemėlapį be pavadinimų, bet su visais kontūrais
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20,
+        noWrap: true
+    }).addTo(map);
+
+    // 2. Duomenų bazė (Lokacijos su GeoJSON kontūrais)
+    // Supaprastinti kontūrai pagal tikrąsias geografines ribas
+    const locations = [
+        // SALOS
+        {
+            name: "Grenlandija",
+            type: "Sala",
+            polygon: [[83.5, -32.0], [81.0, -20.0], [77.0, -18.0], [70.0, -22.0], [66.0, -36.0], [60.0, -43.0], [60.0, -50.0], [63.0, -52.0], [68.0, -54.0], [72.0, -56.0], [76.0, -62.0], [78.0, -68.0], [80.0, -70.0], [82.0, -60.0], [83.0, -45.0], [83.5, -32.0]]
+        },
+        {
+            name: "Islandija",
+            type: "Sala",
+            polygon: [[66.5, -13.5], [66.3, -15.5], [65.8, -18.0], [65.0, -22.0], [64.0, -24.0], [63.4, -24.5], [63.3, -22.0], [63.5, -19.0], [64.0, -16.0], [64.5, -14.0], [65.5, -13.5], [66.5, -13.5]]
+        },
+        {
+            name: "Kuba",
+            type: "Sala",
+            polygon: [[23.2, -74.2], [22.5, -78.0], [21.8, -82.0], [20.2, -84.5], [19.8, -84.0], [20.0, -77.0], [21.5, -74.5], [23.2, -74.2]]
+        },
+        {
+            name: "Naujoji Zelandija",
+            type: "Sala",
+            polygon: [[-34.4, 173.0], [-35.0, 174.5], [-37.5, 175.5], [-41.5, 174.5], [-43.0, 172.5], [-45.5, 170.5], [-46.5, 168.0], [-46.0, 166.5], [-43.5, 168.0], [-41.0, 172.0], [-37.0, 174.0], [-34.4, 173.0]]
+        },
+        {
+            name: "Madagaskaras",
+            type: "Sala",
+            polygon: [[-11.4, 50.5], [-12.0, 49.5], [-14.5, 48.0], [-16.0, 46.5], [-18.0, 44.0], [-20.0, 43.7], [-23.5, 43.7], [-25.5, 45.0], [-25.0, 46.5], [-23.5, 47.5], [-22.0, 48.5], [-20.0, 49.0], [-17.0, 50.5], [-15.0, 50.5], [-12.5, 50.2], [-11.4, 50.5]]
+        },
+        {
+            name: "Sicilija",
+            type: "Sala",
+            polygon: [[38.3, 12.4], [38.2, 13.5], [38.0, 15.0], [37.8, 15.6], [37.3, 15.1], [37.0, 14.5], [36.7, 13.0], [36.7, 12.4], [37.5, 12.4], [38.3, 12.4]]
+        },
+        {
+            name: "Britanija",
+            type: "Sala",
+            polygon: [[58.6, -3.0], [57.5, -7.0], [55.5, -6.0], [54.0, -4.5], [52.0, -4.5], [50.5, -5.0], [50.0, -4.0], [50.5, -1.0], [51.5, 1.7], [52.5, 1.7], [53.5, 0.5], [54.0, -3.0], [55.5, -2.0], [57.0, -2.0], [58.0, -3.5], [58.6, -3.0]]
+        },
+        {
+            name: "Bafino žemė",
+            type: "Sala",
+            polygon: [[74.0, -75.0], [73.0, -77.0], [70.0, -80.0], [68.0, -83.0], [66.0, -85.0], [64.0, -83.0], [63.0, -78.0], [64.0, -72.0], [66.0, -68.0], [70.0, -65.0], [73.0, -68.0], [74.0, -75.0]]
+        },
+        {
+            name: "Kalimantanas (Borneo)",
+            type: "Sala",
+            polygon: [[7.0, 117.0], [5.0, 115.5], [2.0, 109.5], [0.5, 109.0], [-4.0, 109.0], [-4.5, 114.5], [-3.0, 116.0], [-2.0, 118.0], [1.0, 119.5], [4.5, 118.5], [7.0, 117.0]]
+        },
+        {
+            name: "Sumatra",
+            type: "Sala",
+            polygon: [[6.0, 95.5], [3.5, 97.5], [1.0, 100.5], [-1.0, 102.5], [-3.5, 104.0], [-5.5, 105.5], [-6.0, 104.0], [-3.5, 101.5], [0.0, 98.0], [3.0, 96.5], [6.0, 95.5]]
+        },
+        {
+            name: "Naujoji Gvinėja (Papua)",
+            type: "Sala",
+            polygon: [[-1.0, 131.0], [-2.5, 133.0], [-5.0, 141.0], [-8.0, 143.0], [-9.5, 147.0], [-10.5, 150.0], [-9.0, 149.0], [-6.0, 147.0], [-3.0, 142.0], [-1.5, 136.0], [-1.0, 131.0]]
+        },
+        // SALYNAI
+        {
+            name: "Havajų salynas",
+            type: "Salynas",
+            polygon: [[28.5, -178.5], [22.2, -159.8], [21.9, -159.4], [21.3, -157.8], [20.9, -156.5], [19.7, -155.5], [18.9, -155.7], [19.0, -156.5], [19.5, -158.5], [21.5, -160.0], [22.5, -160.5], [28.5, -178.5]]
+        },
+        {
+            name: "Filipinų salynas",
+            type: "Salynas",
+            polygon: [[19.5, 121.0], [18.5, 122.0], [14.5, 121.0], [10.0, 119.5], [7.0, 117.0], [5.5, 119.5], [6.0, 126.0], [9.0, 126.5], [13.0, 124.0], [16.0, 120.0], [18.5, 121.5], [19.5, 121.0]]
+        },
+        {
+            name: "Malajų salynas",
+            type: "Salynas",
+            polygon: [[8.0, 95.0], [6.0, 100.0], [0.0, 104.0], [-6.0, 106.0], [-8.0, 115.0], [-10.0, 120.0], [-8.0, 125.0], [-5.0, 130.0], [-2.0, 135.0], [0.0, 128.0], [3.0, 120.0], [6.0, 110.0], [8.0, 95.0]]
+        },
+        {
+            name: "Japonijos salynas",
+            type: "Salynas",
+            polygon: [[45.5, 142.0], [43.0, 145.5], [41.5, 141.0], [38.0, 138.5], [35.5, 136.0], [33.0, 130.0], [31.0, 131.0], [33.0, 133.0], [36.0, 140.0], [38.0, 141.0], [41.0, 140.0], [45.5, 142.0]]
+        },
+        {
+            name: "Kanarų salynas",
+            type: "Salynas",
+            polygon: [[29.5, -13.5], [28.5, -18.0], [27.5, -18.2], [27.8, -15.5], [28.8, -13.5], [29.5, -13.5]]
+        },
+        // PUSIASALIAI
+        {
+            name: "Indokinijos pusiasalis",
+            type: "Pusiasalis",
+            polygon: [[22.0, 100.0], [20.0, 105.0], [16.0, 107.5], [10.5, 106.5], [8.0, 103.0], [6.0, 100.5], [8.0, 98.0], [12.0, 96.0], [16.0, 95.0], [20.0, 97.0], [22.0, 100.0]]
+        },
+        {
+            name: "Skandinavijos pusiasalis",
+            type: "Pusiasalis",
+            polygon: [[71.0, 25.0], [70.0, 30.0], [69.0, 28.0], [66.0, 24.0], [60.0, 18.0], [58.0, 11.0], [56.0, 10.5], [58.0, 8.0], [60.0, 5.0], [63.0, 6.0], [65.0, 12.0], [68.0, 16.0], [70.0, 20.0], [71.0, 25.0]]
+        },
+        {
+            name: "Labradoro pusiasalis",
+            type: "Pusiasalis",
+            polygon: [[60.0, -64.0], [58.0, -68.0], [55.0, -70.0], [52.0, -66.0], [51.0, -60.0], [52.0, -56.0], [54.0, -58.0], [58.0, -60.0], [60.0, -64.0]]
+        },
+        {
+            name: "Indostano pusiasalis",
+            type: "Pusiasalis",
+            polygon: [[22.0, 70.0], [20.0, 86.0], [18.0, 88.0], [15.0, 80.0], [11.0, 77.0], [8.5, 77.5], [12.0, 72.0], [16.0, 68.0], [22.0, 70.0]]
+        },
+        {
+            name: "Arabijos pusiasalis",
+            type: "Pusiasalis",
+            polygon: [[30.0, 35.0], [29.0, 48.0], [27.0, 56.0], [24.0, 57.0], [20.0, 58.0], [16.0, 53.0], [13.0, 48.0], [13.0, 43.0], [15.0, 42.0], [17.0, 39.0], [20.0, 37.0], [25.0, 34.5], [28.0, 34.8], [30.0, 35.0]]
+        },
+        {
+            name: "Kalifornijos pusiasalis",
+            type: "Pusiasalis",
+            polygon: [[32.5, -117.0], [31.0, -116.0], [28.0, -114.0], [24.0, -110.5], [23.0, -109.5], [22.8, -110.0], [24.0, -112.0], [28.0, -114.5], [30.0, -115.5], [32.5, -117.0]]
+        },
+        // JŪROS
+        {
+            name: "Šiaurės jūra",
+            type: "Jūra",
+            polygon: [[62.0, 5.0], [61.0, 4.5], [59.0, 5.5], [57.5, 7.0], [56.0, 8.5], [55.0, 8.0], [54.0, 6.5], [53.0, 4.0], [52.0, 2.0], [51.5, 1.5], [51.0, 2.5], [51.5, 3.5], [53.0, 5.0], [55.0, 6.5], [57.5, 2.0], [58.5, 0.5], [59.5, 2.0], [61.0, 3.5], [62.0, 5.0]]
+        },
+        {
+            name: "Karibų jūra",
+            type: "Jūra",
+            polygon: [[22.0, -78.0], [20.0, -85.0], [16.0, -88.0], [12.0, -82.0], [10.0, -75.0], [10.0, -61.0], [12.0, -60.0], [15.0, -64.0], [18.0, -68.0], [22.0, -78.0]]
+        },
+        {
+            name: "Viduržemio jūra",
+            type: "Jūra",
+            polygon: [[44.0, 6.0], [43.0, 9.5], [41.0, 18.0], [40.0, 20.0], [37.0, 23.0], [36.0, 28.0], [34.0, 34.0], [33.0, 35.0], [31.0, 34.0], [31.0, 25.0], [32.0, 18.0], [33.0, 12.0], [35.0, 0.0], [36.0, -5.5], [38.0, -1.0], [40.0, 3.0], [42.0, 5.0], [44.0, 6.0]]
+        },
+        {
+            name: "Juodoji jūra",
+            type: "Jūra",
+            polygon: [[47.0, 30.0], [46.0, 36.0], [45.0, 41.5], [43.0, 41.5], [42.0, 40.0], [41.0, 28.5], [43.0, 28.0], [45.0, 30.0], [47.0, 30.0]]
+        },
+        {
+            name: "Baltijos jūra",
+            type: "Jūra",
+            polygon: [[65.9, 24.0], [60.5, 28.0], [59.5, 27.0], [58.5, 23.0], [56.0, 19.0], [54.3, 13.5], [54.0, 10.5], [54.5, 10.0], [55.5, 12.5], [56.5, 16.0], [58.0, 19.0], [59.0, 21.0], [60.0, 26.5], [63.0, 22.0], [65.5, 22.5], [65.9, 24.0]]
+        },
+        {
+            name: "Japonų jūra",
+            type: "Jūra",
+            polygon: [[52.0, 141.0], [48.0, 142.0], [43.0, 140.0], [38.0, 138.0], [35.0, 130.0], [37.0, 128.0], [40.0, 129.0], [43.0, 132.0], [46.0, 137.0], [50.0, 140.0], [52.0, 141.0]]
+        },
+        {
+            name: "Arabų jūra",
+            type: "Jūra",
+            polygon: [[24.0, 57.0], [20.0, 67.0], [15.0, 72.0], [10.0, 76.0], [8.0, 75.0], [10.0, 68.0], [12.0, 60.0], [13.0, 52.0], [16.0, 53.0], [20.0, 58.0], [24.0, 57.0]]
+        },
+        {
+            name: "Raudonoji jūra",
+            type: "Jūra",
+            polygon: [[30.0, 32.5], [28.0, 35.0], [24.0, 37.5], [20.0, 38.5], [15.0, 42.0], [12.5, 43.5], [12.0, 43.0], [15.0, 40.0], [20.0, 37.0], [25.0, 35.0], [28.0, 33.0], [30.0, 32.5]]
+        },
+        {
+            name: "Beringo jūra",
+            type: "Jūra",
+            polygon: [[66.0, -169.0], [63.0, -172.0], [60.0, -179.0], [57.0, -175.0], [54.0, -165.0], [55.0, -162.0], [60.0, -165.0], [64.0, -167.0], [66.0, -169.0]]
+        },
+        {
+            name: "Tasmano jūra",
+            type: "Jūra",
+            polygon: [[-28.0, 153.0], [-32.0, 155.0], [-38.0, 158.0], [-43.0, 163.0], [-47.0, 167.0], [-48.0, 166.0], [-44.0, 160.0], [-38.0, 155.0], [-32.0, 150.0], [-28.0, 153.0]]
+        },
+        // ĮLANKOS
+        {
+            name: "Bengalų (Bengalijos) įlanka",
+            type: "Įlanka",
+            polygon: [[22.0, 88.0], [21.0, 92.0], [18.0, 95.0], [14.0, 97.0], [10.0, 98.0], [6.0, 97.0], [5.0, 94.0], [6.0, 85.0], [8.0, 81.0], [13.0, 80.0], [18.0, 82.0], [20.0, 84.0], [22.0, 88.0]]
+        },
+        {
+            name: "Persų (Persijos) įlanka",
+            type: "Įlanka",
+            polygon: [[30.0, 48.5], [29.0, 50.5], [27.0, 52.0], [26.0, 55.0], [25.0, 56.5], [24.5, 55.0], [25.0, 51.0], [27.0, 49.0], [30.0, 48.5]]
+        },
+        {
+            name: "Meksikos įlanka",
+            type: "Įlanka",
+            polygon: [[30.5, -87.0], [29.0, -94.0], [26.0, -97.0], [23.0, -97.0], [20.0, -96.0], [19.0, -92.0], [18.5, -88.0], [21.0, -82.0], [24.5, -81.0], [28.0, -83.0], [30.5, -87.0]]
+        },
+        {
+            name: "Biskajos įlanka",
+            type: "Įlanka",
+            polygon: [[48.5, -5.0], [47.5, -6.0], [45.5, -2.0], [43.5, -2.0], [43.5, -1.0], [46.0, -1.5], [48.0, -4.0], [48.5, -5.0]]
+        },
+        {
+            name: "Gvinėjos įlanka",
+            type: "Įlanka",
+            polygon: [[5.0, -3.0], [4.0, 3.0], [2.0, 8.0], [-1.0, 9.5], [-4.0, 9.0], [-5.0, 8.0], [-4.0, 5.0], [0.0, 0.0], [3.0, -2.0], [5.0, -3.0]]
+        },
+        {
+            name: "Kalifornijos įlanka",
+            type: "Įlanka",
+            polygon: [[32.0, -115.0], [29.0, -113.5], [25.0, -110.5], [23.0, -109.5], [24.0, -108.0], [27.0, -111.0], [30.0, -113.0], [32.0, -115.0]]
+        },
+        {
+            name: "Karpentarios įlanka",
+            type: "Įlanka",
+            polygon: [[-10.5, 135.0], [-12.0, 137.0], [-14.0, 139.0], [-16.0, 140.0], [-17.5, 139.5], [-16.0, 137.0], [-14.0, 136.0], [-11.0, 136.0], [-10.5, 135.0]]
+        },
+        {
+            name: "Hadsono įlanka",
+            type: "Įlanka",
+            polygon: [[64.0, -83.0], [62.0, -92.0], [60.0, -95.0], [56.0, -92.0], [54.0, -85.0], [53.0, -78.0], [56.0, -76.0], [60.0, -78.0], [63.0, -80.0], [64.0, -83.0]]
+        },
+        // SĄSIAURIAI
+        {
+            name: "Beringo sąsiauris",
+            type: "Sąsiauris",
+            polygon: [[66.5, -169.5], [66.0, -168.0], [65.5, -168.5], [65.2, -169.5], [65.5, -170.5], [66.0, -170.0], [66.5, -169.5]]
+        },
+        {
+            name: "Dreiko sąsiauris",
+            type: "Sąsiauris",
+            polygon: [[-54.0, -71.0], [-56.0, -68.0], [-58.0, -65.0], [-59.0, -63.0], [-60.0, -65.0], [-58.0, -68.0], [-56.0, -70.0], [-54.0, -71.0]]
+        },
+        {
+            name: "Magelano sąsiauris",
+            type: "Sąsiauris",
+            polygon: [[-52.5, -69.0], [-53.0, -71.0], [-54.0, -72.0], [-54.0, -70.0], [-53.0, -68.0], [-52.5, -69.0]]
+        },
+        {
+            name: "Gibraltaro sąsiauris",
+            type: "Sąsiauris",
+            polygon: [[36.2, -5.6], [36.1, -5.3], [36.0, -5.3], [35.9, -5.4], [35.8, -5.5], [35.9, -5.7], [36.0, -5.8], [36.1, -5.7], [36.2, -5.6]]
+        },
+        {
+            name: "Mozambiko sąsiauris",
+            type: "Sąsiauris",
+            polygon: [[-11.0, 40.0], [-13.0, 41.0], [-16.0, 42.0], [-20.0, 43.0], [-23.0, 43.5], [-26.0, 44.0], [-25.0, 35.0], [-20.0, 36.0], [-15.0, 38.0], [-11.0, 40.0]]
+        },
+        // KANALAI
+        {
+            name: "Sueco kanalas",
+            type: "Kanalas",
+            lat: 30.6, lng: 32.3, tolerance: 100000
+        },
+        {
+            name: "Panamos kanalas",
+            type: "Kanalas",
+            lat: 9.1, lng: -79.7, tolerance: 100000
+        }
+    ];
+
+    let currentIdx = 0;
+    let score = 0;
+    let maxScore = 0;
+    let isAnswered = false;
+    let activeMarkers = [];
+    let examQuestions = [];
+    let totalQuestions = 10;
+    let results = []; // Saugome kiekvieno klausimo rezultatus
+
+    const questionText = document.getElementById("question-text");
+    const feedbackText = document.getElementById("feedback");
+    const nextBtn = document.getElementById("next-btn");
+    const scoreEl = document.getElementById("score");
+    const maxScoreEl = document.getElementById("max-score");
+    const questionNumEl = document.getElementById("question-num");
+    const totalQuestionsEl = document.getElementById("total-questions");
+    const avgScoreEl = document.getElementById("avg-score");
+
+    // Funkcijos tipų pasirinkimui
+    function selectAllTypes() {
+        document.querySelectorAll('.type-checkbox').forEach(cb => cb.checked = true);
+    }
+
+    function deselectAllTypes() {
+        document.querySelectorAll('.type-checkbox').forEach(cb => cb.checked = false);
+    }
+
+    // Funkcija gauti pasirinktus tipus
+    function getSelectedTypes() {
+        const typeMap = {
+            'type-sala': 'Sala',
+            'type-salynas': 'Salynas',
+            'type-pusiasalis': 'Pusiasalis',
+            'type-jura': 'Jūra',
+            'type-ilanka': 'Įlanka',
+            'type-sasiauris': 'Sąsiauris',
+            'type-kanalas': 'Kanalas'
+        };
+
+        const selected = [];
+        for (const [id, type] of Object.entries(typeMap)) {
+            if (document.getElementById(id).checked) {
+                selected.push(type);
+            }
+        }
+        return selected;
+    }
+
+    // Funkcija pradėti egzaminą
+    function startExam(numQuestions) {
+        // Gauti pasirinktus tipus
+        const selectedTypes = getSelectedTypes();
+
+        if (selectedTypes.length === 0) {
+            alert('Pasirinkite bent vieną objekto tipą!');
+            return;
+        }
+
+        // Filtruoti vietoves pagal pasirinktus tipus
+        const filteredLocations = locations.filter(loc => selectedTypes.includes(loc.type));
+
+        if (filteredLocations.length === 0) {
+            alert('Nėra vietovių su pasirinktais tipais!');
+            return;
+        }
+
+        // Nustatyti klausimų skaičių
+        if (numQuestions === 'all') {
+            totalQuestions = filteredLocations.length;
+        } else {
+            totalQuestions = Math.min(numQuestions, filteredLocations.length);
+        }
+
+        // Išmaišome ir paimame reikiamą kiekį klausimų
+        const shuffled = [...filteredLocations].sort(() => Math.random() - 0.5);
+        examQuestions = shuffled.slice(0, totalQuestions);
+
+        // Paslėpti pradžios ekraną
+        document.getElementById("start-screen").style.display = "none";
+
+        // Atnaujinti UI
+        totalQuestionsEl.innerText = totalQuestions;
+        maxScoreEl.innerText = totalQuestions * 100;
+
+        // Pradėti pirmą klausimą
+        showQuestion();
+    }
+
+    function showQuestion() {
+        if (currentIdx >= examQuestions.length) {
+            endGame();
+            return;
+        }
+
+        const loc = examQuestions[currentIdx];
+        questionText.innerHTML = `Rask šią vietą: <span class="target-name">${loc.name}</span> (${loc.type})`;
+        feedbackText.innerHTML = "Spustelėk žemėlapyje";
+        feedbackText.className = "";
+        nextBtn.style.display = "none";
+        isAnswered = false;
+
+        // Atnaujinti klausimo numerį
+        questionNumEl.innerText = currentIdx + 1;
+
+        // Išvalome senus markerius
+        activeMarkers.forEach(layer => map.removeLayer(layer));
+        activeMarkers = [];
+    }
+
+    // Funkcija skaičiuoti taškus pagal atstumą
+    function calculatePoints(distance, isInside = false) {
+        if (isInside) return 100; // Pilni taškai jei pataikė į teritoriją
+
+        // Taškų skaičiavimas pagal atstumą (kilometrais) - didesnės paklaidos
+        const km = distance / 1000;
+
+        if (km <= 100) return 95;
+        if (km <= 250) return 90;
+        if (km <= 500) return 85;
+        if (km <= 750) return 75;
+        if (km <= 1000) return 65;
+        if (km <= 1500) return 50;
+        if (km <= 2000) return 35;
+        if (km <= 3000) return 20;
+        if (km <= 4000) return 10;
+        if (km <= 5000) return 5;
+        return 0;
+    }
+
+    // Funkcija tikrinti ar taškas yra poligono viduje (Ray Casting algoritmas)
+    function isPointInPolygon(point, polygon) {
+        let x = point.lat, y = point.lng;
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            let xi = polygon[i][0], yi = polygon[i][1];
+            let xj = polygon[j][0], yj = polygon[j][1];
+            let intersect = ((yi > y) !== (yj > y))
+                && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    // Paspaudimo logika
+    map.on('click', function(e) {
+        if (isAnswered) return;
+
+        isAnswered = true;
+        const target = examQuestions[currentIdx];
+        const clickLatLng = e.latlng;
+
+        // Pavaizduojame kur paspaudė vartotojas
+        const userMarker = L.marker(clickLatLng).addTo(map).bindPopup("Tavo spėjimas").openPopup();
+        activeMarkers.push(userMarker);
+
+        let earnedPoints = 0;
+        let distance = null;
+        let isInside = false;
+
+        // Jei objektas turi poligoną - tikriname ar paspaudimas yra viduje
+        if (target.polygon) {
+            isInside = isPointInPolygon(clickLatLng, target.polygon);
+
+            // Jei nepataikė į vidų, skaičiuojame atstumą iki artimiausio poligono taško
+            if (!isInside) {
+                distance = Infinity;
+                target.polygon.forEach(point => {
+                    const polyPoint = L.latLng(point[0], point[1]);
+                    const dist = clickLatLng.distanceTo(polyPoint);
+                    if (dist < distance) distance = dist;
+                });
+            }
+
+            // Pavaizduojame tikrą teritoriją
+            const polygonLayer = L.polygon(target.polygon, {
+                color: isInside ? 'green' : (distance < 500000 ? 'orange' : 'red'),
+                fillColor: isInside ? 'green' : (distance < 500000 ? 'orange' : 'red'),
+                fillOpacity: 0.2
+            }).addTo(map).bindPopup(target.name);
+            activeMarkers.push(polygonLayer);
+
+            // Skaičiuojame taškus
+            earnedPoints = calculatePoints(distance || 0, isInside);
+
+            if (isInside) {
+                feedbackText.innerHTML = `🎯 Puiku! Pataikei į ${target.name}! (+${earnedPoints} tšk.)`;
+                feedbackText.className = "correct";
+            } else {
+                const km = (distance / 1000).toFixed(0);
+                if (earnedPoints > 0) {
+                    feedbackText.innerHTML = `📍 Arti! Nutolęs ${km} km nuo ${target.name}. (+${earnedPoints} tšk.)`;
+                    feedbackText.className = "partial";
+                } else {
+                    feedbackText.innerHTML = `❌ Nepataikei. Tai buvo ${target.name} (nutolęs ${km} km). (+0 tšk.)`;
+                    feedbackText.className = "incorrect";
+                }
+            }
+        } else {
+            // Kanalams - tikslus taškas
+            const targetLatLng = L.latLng(target.lat, target.lng);
+            distance = clickLatLng.distanceTo(targetLatLng);
+
+            const correctMarker = L.circleMarker(targetLatLng, {
+                color: 'green',
+                radius: 10
+            }).addTo(map).bindPopup(target.name);
+            activeMarkers.push(correctMarker);
+
+            const line = L.polyline([clickLatLng, targetLatLng], {color: 'blue', dashArray: '5, 10'}).addTo(map);
+            activeMarkers.push(line);
+
+            // Skaičiuojame taškus
+            earnedPoints = calculatePoints(distance);
+            const km = (distance / 1000).toFixed(0);
+
+            if (earnedPoints >= 90) {
+                feedbackText.innerHTML = `🎯 Puikiai! Atstumas ${km} km. (+${earnedPoints} tšk.)`;
+                feedbackText.className = "correct";
+            } else if (earnedPoints > 0) {
+                feedbackText.innerHTML = `📍 Gerai! Atstumas ${km} km. (+${earnedPoints} tšk.)`;
+                feedbackText.className = "partial";
+            } else {
+                feedbackText.innerHTML = `❌ Per toli - ${km} km. (+0 tšk.)`;
+                feedbackText.className = "incorrect";
+            }
+        }
+
+        // Saugome rezultatą
+        results.push({
+            location: target.name,
+            type: target.type,
+            points: earnedPoints,
+            distance: distance ? (distance / 1000).toFixed(0) : 0,
+            isInside: isInside
+        });
+
+        // Atnaujinti taškus
+        score += earnedPoints;
+        maxScore += 100;
+        scoreEl.innerText = Math.round(score);
+        maxScoreEl.innerText = maxScore;
+
+        // Skaičiuoti vidurkį
+        const avg = (score / maxScore * 100).toFixed(1);
+        avgScoreEl.innerText = avg;
+
+        nextBtn.style.display = "inline-block";
+    });
+
+    function nextLevel() {
+        currentIdx++;
+        showQuestion();
+    }
+
+    function endGame() {
+        const percentage = (score / maxScore * 100).toFixed(1);
+        let grade = "";
+        let gradeClass = "";
+
+        if (percentage >= 90) {
+            grade = "PUIKIAI! 🌟";
+            gradeClass = "grade-excellent";
+        } else if (percentage >= 75) {
+            grade = "GERAI! ✓";
+            gradeClass = "grade-good";
+        } else if (percentage >= 50) {
+            grade = "PATENKINAMAI";
+            gradeClass = "grade-good";
+        } else {
+            grade = "NEPAKANKA";
+            gradeClass = "grade-fail";
+        }
+
+        // Sukurti rezultatų lentelę
+        let tableHTML = `
+            <h2 class="${gradeClass}">${grade}</h2>
+            <h3>Galutinis rezultatas: ${Math.round(score)} / ${maxScore} (${percentage}%)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Vietovė</th>
+                        <th>Tipas</th>
+                        <th>Taškai</th>
+                        <th>Nutolimas</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        results.forEach((result, idx) => {
+            const pointClass = result.points >= 90 ? 'correct' : (result.points > 0 ? 'partial' : 'incorrect');
+            tableHTML += `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${result.location}</td>
+                    <td>${result.type}</td>
+                    <td class="${pointClass}">${result.points}/100</td>
+                    <td>${result.isInside ? '✓ Viduje' : result.distance + ' km'}</td>
+                </tr>
+            `;
+        });
+
+        tableHTML += `
+                </tbody>
+            </table>
+            <button class="btn btn-secondary" onclick="location.reload()" style="margin-top: 20px;">🔄 Naujas egzaminas</button>
+        `;
+
+        questionText.innerHTML = `Egzaminas baigtas!`;
+        feedbackText.innerHTML = `<div id="results-table">${tableHTML}</div>`;
+        nextBtn.style.display = "none";
+    }
+
+</script>
+
+</body>
+</html>
