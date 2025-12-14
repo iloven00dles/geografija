@@ -562,6 +562,7 @@ const locations = [
     let examQuestions = [];
     let totalQuestions = 10;
     let results = []; // Saugome kiekvieno klausimo rezultatus
+    let startTime = null; // Testo pradžios laikas
 
     const questionText = document.getElementById("question-text");
     const feedbackText = document.getElementById("feedback");
@@ -637,6 +638,9 @@ const locations = [
         // Atnaujinti UI
         totalQuestionsEl.innerText = totalQuestions;
         maxScoreEl.innerText = totalQuestions * 100;
+
+        // Pradėti laikmatį
+        startTime = new Date();
 
         // Pradėti pirmą klausimą
         showQuestion();
@@ -809,6 +813,13 @@ const locations = [
     }
 
     function endGame() {
+        // Apskaičiuoti praleistą laiką
+        const elapsedTime = new Date() - startTime;
+        const totalSeconds = Math.floor(elapsedTime / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        const timeString = `${minutes}min ${seconds}s`;
+
         const percentage = (score / maxScore * 100).toFixed(1);
         let grade = "";
         let gradeClass = "";
@@ -890,6 +901,7 @@ const locations = [
         let tableHTML = `
             <h2 class="${gradeClass}">${grade}</h2>
             <h3>Galutinis rezultatas: ${Math.round(score)} / ${maxScore} (${percentage}%)</h3>
+            <h3>Laikas: ${timeString}</h3>
             <div class="btn-container">
                 <button class="btn btn-secondary" onclick="location.reload()">🔄 Naujas testas</button>
             </div>
