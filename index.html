@@ -53,10 +53,15 @@
         .select-btn:hover { background-color: #95a5a6; }
 
         /* Rezultatų lentelė */
-        #results-table { max-width: 600px; margin: 20px auto; background: white; color: #2c3e50; padding: 20px; border-radius: 10px; max-height: 60vh; overflow-y: auto; }
-        #results-table table { width: 100%; border-collapse: collapse; }
-        #results-table th, #results-table td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-        #results-table th { background-color: #34495e; color: white; }
+        #results-table { max-width: 800px; margin: 0 auto; background: white; color: #2c3e50; padding: 20px; border-radius: 10px; }
+        #results-table h2 { margin: 0 0 15px 0; font-size: 2em; text-align: center; }
+        #results-table h3 { margin: 0 0 15px 0; font-size: 1.2em; text-align: center; }
+        #results-table .table-wrapper { max-height: 50vh; overflow-y: auto; margin: 15px 0; }
+        #results-table table { width: 100%; border-collapse: collapse; font-size: 0.95em; }
+        #results-table th, #results-table td { padding: 8px 6px; text-align: left; border-bottom: 1px solid #ddd; }
+        #results-table th { background-color: #34495e; color: white; position: sticky; top: 0; }
+        #results-table .gif-container { margin: 15px 0; text-align: center; }
+        #results-table .btn-container { margin-top: 15px; text-align: center; }
         .grade-excellent { color: #27ae60; font-weight: bold; }
         .grade-good { color: #f39c12; font-weight: bold; }
         .grade-fail { color: #c0392b; font-weight: bold; }
@@ -885,18 +890,19 @@ const locations = [
         let tableHTML = `
             <h2 class="${gradeClass}">${grade}</h2>
             <h3>Galutinis rezultatas: ${Math.round(score)} / ${maxScore} (${percentage}%)</h3>
-            ${celebrationGif}
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Vietovė</th>
-                        <th>Tipas</th>
-                        <th>Taškai</th>
-                        <th>Nutolimas</th>
-                    </tr>
-                </thead>
-                <tbody>
+            <div class="gif-container">${celebrationGif}</div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Vietovė</th>
+                            <th>Tipas</th>
+                            <th>Taškai</th>
+                            <th>Nutolimas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
         `;
 
         results.forEach((result, idx) => {
@@ -913,14 +919,25 @@ const locations = [
         });
 
         tableHTML += `
-                </tbody>
-            </table>
-            <button class="btn btn-secondary" onclick="location.reload()" style="margin-top: 20px;">🔄 Naujas testas</button>
+                    </tbody>
+                </table>
+            </div>
+            <div class="btn-container">
+                <button class="btn btn-secondary" onclick="location.reload()">🔄 Naujas testas</button>
+            </div>
         `;
 
-        questionText.innerHTML = `Testas baigtas!`;
-        feedbackText.innerHTML = `<div id="results-table">${tableHTML}</div>`;
-        nextBtn.style.display = "none";
+        // Paslėpti žemėlapį ir task-box, rodyti rezultatus full screen
+        document.getElementById('map').style.display = 'none';
+        document.getElementById('task-box').style.display = 'none';
+        document.getElementById('header').style.display = 'none';
+
+        // Sukurti full screen rezultatų langą
+        const resultsContainer = document.createElement('div');
+        resultsContainer.id = 'results-container';
+        resultsContainer.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(44, 62, 80, 0.95); z-index: 2000; overflow-y: auto; padding: 20px; box-sizing: border-box;';
+        resultsContainer.innerHTML = `<div id="results-table">${tableHTML}</div>`;
+        document.body.appendChild(resultsContainer);
     }
 
 </script>
