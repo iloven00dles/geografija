@@ -893,7 +893,26 @@ const locations = [
                 document.body.appendChild(script);
             }
         }
-        // Prastas rezultatas (<50%)
+        // Labai prastas rezultatas (<10%)
+        else if (percentage < 10) {
+            celebrationGif = `
+                <div style="margin: 20px 0; text-align: center;">
+                    <div class="tenor-gif-embed" data-postid="15477693028377190768" data-share-method="host" data-aspect-ratio="1.32447" data-width="40%">
+                        <a href="https://tenor.com/view/confuse-cat-gif-15477693028377190768">Confuse Cat</a>
+                    </div>
+                </div>`;
+
+            // Įkelti Tenor embed scriptą
+            if (!document.getElementById('tenor-embed-script')) {
+                const script = document.createElement('script');
+                script.id = 'tenor-embed-script';
+                script.type = 'text/javascript';
+                script.async = true;
+                script.src = 'https://tenor.com/embed.js';
+                document.body.appendChild(script);
+            }
+        }
+        // Prastas rezultatas (10-50%)
         else if (percentage < 50) {
             const sadGifs = [
                 { id: "10103206880427503134", name: "Sad Dog", url: "https://tenor.com/view/sad-dog-sad-face-crying-crying-baby-gif-10103206880427503134" },
