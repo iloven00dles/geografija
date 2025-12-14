@@ -822,10 +822,70 @@ const locations = [
             gradeClass = "grade-fail";
         }
 
+        // GIF'ai pagal rezultatą
+        let celebrationGif = "";
+
+        // Puikus rezultatas (>94%)
+        if (percentage > 94) {
+            const successGifs = [
+                { id: "4799016402311452771", name: "Herve Peepo", url: "https://tenor.com/view/herve-peepo-pepo-thumbs-up-pepe-gif-4799016402311452771" },
+                { id: "914995118423900873", name: "Nice Sigma", url: "https://tenor.com/view/nice-sigma-gif-914995118423900873" },
+                { id: "16050482", name: "Perfect Match", url: "https://tenor.com/view/perfect-match-cat-cute-gif-16050482" },
+                { id: "14121539344197617839", name: "Good Job", url: "https://tenor.com/view/good-job-gif-14121539344197617839" },
+                { id: "8650293081808857112", name: "Kitty Meow", url: "https://tenor.com/view/kitty-meow-meow-hi-five-well-done-proud-of-you-gif-8650293081808857112" },
+                { id: "9848298218460771056", name: "Homer Simpson Whoo Hoo", url: "https://tenor.com/view/homer-simpson-whoo-hoo-yes-yay-gif-9848298218460771056" }
+            ];
+            const randomGif = successGifs[Math.floor(Math.random() * successGifs.length)];
+            celebrationGif = `
+                <div style="margin: 20px 0; text-align: center;">
+                    <div class="tenor-gif-embed" data-postid="${randomGif.id}" data-share-method="host" data-aspect-ratio="1" data-width="40%">
+                        <a href="${randomGif.url}">${randomGif.name}</a>
+                    </div>
+                </div>`;
+
+            // Įkelti Tenor embed scriptą
+            if (!document.getElementById('tenor-embed-script')) {
+                const script = document.createElement('script');
+                script.id = 'tenor-embed-script';
+                script.type = 'text/javascript';
+                script.async = true;
+                script.src = 'https://tenor.com/embed.js';
+                document.body.appendChild(script);
+            }
+        }
+        // Prastas rezultatas (<50%)
+        else if (percentage < 50) {
+            const sadGifs = [
+                { id: "10103206880427503134", name: "Sad Dog", url: "https://tenor.com/view/sad-dog-sad-face-crying-crying-baby-gif-10103206880427503134" },
+                { id: "1418144503451126279", name: "Sad Spongebob", url: "https://tenor.com/view/sad-spongebob-sad-reaction-meme-gif-1418144503451126279" },
+                { id: "1975526499861417359", name: "Sad", url: "https://tenor.com/view/sad-gif-1975526499861417359" },
+                { id: "5276199764143986284", name: "Dog Crying", url: "https://tenor.com/view/dog-crying-meme-doggo-crys-megan-soo-crying-dog-gif-5276199764143986284" },
+                { id: "13518564799186478937", name: "Homer Simpson Sad", url: "https://tenor.com/view/simpsons-homer-simpson-gif-13518564799186478937" }
+            ];
+            const randomGif = sadGifs[Math.floor(Math.random() * sadGifs.length)];
+            celebrationGif = `
+                <div style="margin: 20px 0; text-align: center;">
+                    <div class="tenor-gif-embed" data-postid="${randomGif.id}" data-share-method="host" data-aspect-ratio="1" data-width="40%">
+                        <a href="${randomGif.url}">${randomGif.name}</a>
+                    </div>
+                </div>`;
+
+            // Įkelti Tenor embed scriptą
+            if (!document.getElementById('tenor-embed-script')) {
+                const script = document.createElement('script');
+                script.id = 'tenor-embed-script';
+                script.type = 'text/javascript';
+                script.async = true;
+                script.src = 'https://tenor.com/embed.js';
+                document.body.appendChild(script);
+            }
+        }
+
         // Sukurti rezultatų lentelę
         let tableHTML = `
             <h2 class="${gradeClass}">${grade}</h2>
             <h3>Galutinis rezultatas: ${Math.round(score)} / ${maxScore} (${percentage}%)</h3>
+            ${celebrationGif}
             <table>
                 <thead>
                     <tr>
