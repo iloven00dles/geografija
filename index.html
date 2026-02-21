@@ -6,219 +6,117 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Geografijos Žaidimai</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap');
-
-        :root {
-            --bg-grad-1: #0f2027;
-            --bg-grad-2: #203a43;
-            --bg-grad-3: #2c5364;
-            --primary: #4facfe;
-            --secondary: #00f2fe;
-            --card-bg: rgba(255, 255, 255, 0.05);
-            --card-border: rgba(255, 255, 255, 0.1);
-        }
-
         body,
         html {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            font-family: 'Outfit', sans-serif;
-            background: linear-gradient(135deg, var(--bg-grad-1), var(--bg-grad-2), var(--bg-grad-3));
-            background-size: 400% 400%;
-            animation: gradientBG 15s ease infinite;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #2c3e50;
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
         }
 
-        @keyframes gradientBG {
-            0% {
-                background-position: 0% 50%;
-            }
-
-            50% {
-                background-position: 100% 50%;
-            }
-
-            100% {
-                background-position: 0% 50%;
-            }
-        }
-
-        /* Dekoratyviniai burbulai */
+        /* Dekoratyviniai burbulai paslepiami, nes jie netinka paprastam stiliui */
         .bubble {
-            position: absolute;
-            border-radius: 50%;
-            background: linear-gradient(45deg, var(--primary), var(--secondary));
-            filter: blur(80px);
-            opacity: 0.4;
-            z-index: 0;
-            animation: float 10s infinite;
-        }
-
-        .bubble-1 {
-            width: 400px;
-            height: 400px;
-            top: -100px;
-            left: -100px;
-            animation-duration: 14s;
-            animation-delay: 0s;
-        }
-
-        .bubble-2 {
-            width: 300px;
-            height: 300px;
-            bottom: -50px;
-            right: -50px;
-            background: linear-gradient(45deg, #ff416c, #ff4b2b);
-            animation-duration: 18s;
-            animation-delay: -5s;
-        }
-
-        @keyframes float {
-
-            0%,
-            100% {
-                transform: translateY(0) scale(1);
-            }
-
-            50% {
-                transform: translateY(-30px) scale(1.05);
-            }
+            display: none;
         }
 
         .container {
-            position: relative;
-            z-index: 10;
             text-align: center;
             padding: 40px;
             max-width: 1000px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .header h1 {
-            font-size: 4rem;
-            font-weight: 900;
+            font-size: 3.5rem;
             margin: 0 0 10px 0;
-            background: linear-gradient(to right, #fff, rgba(255, 255, 255, 0.7));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0px 10px 30px rgba(0, 0, 0, 0.5);
-            letter-spacing: 2px;
+            color: #ecf0f1;
         }
 
         .header p {
-            font-size: 1.3rem;
-            font-weight: 300;
-            color: rgba(255, 255, 255, 0.8);
-            margin-bottom: 60px;
+            font-size: 1.2rem;
+            color: #bdc3c7;
+            margin-bottom: 50px;
         }
 
         .cards {
             display: flex;
-            gap: 40px;
+            gap: 30px;
             justify-content: center;
             flex-wrap: wrap;
         }
 
         .card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 24px;
-            padding: 50px 40px;
-            width: 320px;
+            background-color: #ecf0f1;
+            border-radius: 8px;
+            padding: 40px 30px;
+            width: 280px;
             text-decoration: none;
-            color: white;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
-            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-            position: relative;
-            overflow: hidden;
+            color: #2c3e50;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
             display: flex;
             flex-direction: column;
             align-items: center;
-        }
-
-        /* Hover efektai kortelėms */
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 50%;
-            height: 100%;
-            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);
-            transform: skewX(-20deg);
-            transition: left 0.7s;
-        }
-
-        .card:hover::before {
-            left: 150%;
+            border-bottom: 4px solid #bdc3c7;
         }
 
         .card:hover {
-            transform: translateY(-20px) scale(1.02);
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.3);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.1);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
         }
 
         .icon-wrapper {
-            font-size: 5rem;
-            margin-bottom: 25px;
-            filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.3));
-            transition: transform 0.4s ease;
-        }
-
-        .card:hover .icon-wrapper {
-            transform: scale(1.15) rotate(5deg);
+            font-size: 4rem;
+            margin-bottom: 20px;
         }
 
         .card h2 {
             font-size: 1.8rem;
             margin: 0 0 15px 0;
-            font-weight: 700;
+            color: #2c3e50;
         }
 
         .card p {
             font-size: 1rem;
-            line-height: 1.6;
-            color: rgba(255, 255, 255, 0.7);
-            margin: 0 0 30px 0;
+            line-height: 1.5;
+            color: #34495e;
+            margin: 0 0 25px 0;
+            flex-grow: 1;
         }
 
         .btn {
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            background-color: #3498db;
             border: none;
-            padding: 12px 30px;
-            border-radius: 30px;
+            padding: 10px 20px;
+            border-radius: 5px;
             color: white;
-            font-family: 'Outfit', sans-serif;
-            font-weight: 700;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-weight: bold;
             font-size: 1rem;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+            transition: background-color 0.2s;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .card:hover .btn {
-            box-shadow: 0 15px 30px rgba(79, 172, 254, 0.5);
-            transform: translateY(-2px);
+            background-color: #2980b9;
         }
 
         .btn-green {
-            background: linear-gradient(90deg, #11998e, #38ef7d);
-            box-shadow: 0 10px 20px rgba(56, 239, 125, 0.3);
+            background-color: #27ae60;
         }
 
         .card:hover .btn-green {
-            box-shadow: 0 15px 30px rgba(56, 239, 125, 0.5);
+            background-color: #2ecc71;
         }
 
         @media (max-width: 800px) {
@@ -228,7 +126,7 @@
             }
 
             .header h1 {
-                font-size: 3rem;
+                font-size: 2.5rem;
             }
         }
     </style>
@@ -240,8 +138,7 @@
 
     <div class="container">
         <div class="header">
-            <h1>🌍 Atrask Pasaulį</h1>
-            <p>Pasirink, ką nori tyrinėti ir pasitikrink savo geografijos žinias interaktyviai.</p>
+            <h1>🌍Geografijos testukai:D</h1>
         </div>
 
         <div class="cards">
@@ -249,8 +146,7 @@
             <a href="pasaulis.html" class="card">
                 <div class="icon-wrapper">🗺️</div>
                 <h2>Pasaulis</h2>
-                <p>Išbandyk žinias apie pasaulio salas, pusiasalius, jūras, įlankas, sąsiaurius ir kanalus. Rask juos
-                    žemėlapyje!</p>
+                <p> salos, pusiasaliai, jūros, įlankos, sąsiauriai ir kanalai. senas testas.</p>
                 <div class="btn">Žaisti</div>
             </a>
 
@@ -258,8 +154,7 @@
             <a href="lietuva.html" class="card">
                 <div class="icon-wrapper">🇱🇹</div>
                 <h2>Lietuva</h2>
-                <p>Ar gerai pažįsti Lietuvą? Pasitikrink ir rask svarbiausius Lietuvos geografinius objektus, miestus
-                    bei regionus.</p>
+                <p> upės, ežerai, marios, aukštumos. naujas testas. </p>
                 <div class="btn btn-green">Žaisti</div>
             </a>
         </div>
