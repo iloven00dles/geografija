@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="lt">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-S9FGG9GK89"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-S9FGG9GK89');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lietuvos geografijos testas</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #task-box {
+            background-color: #ecf0f1;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.2em;
+            border-bottom: 2px solid #bdc3c7;
+        }
+
+        #map {
+            flex-grow: 1;
+            width: 100%;
+            cursor: crosshair;
+        }
+
+        .target-name {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+
+        .btn {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 1em;
+            border-radius: 5px;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            background-color: #2ecc71;
+        }
+
+        .btn-secondary {
+            background-color: #3498db;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5dade2;
+        }
+
+        .info-panel {
+            font-size: 0.9em;
+        }
+
+        #feedback {
+            margin-top: 10px;
+            font-weight: bold;
+            min-height: 24px;
+        }
+
+        /* Stiliai teisingam/neteisingam atsakymui */
+        .correct {
+            color: #27ae60;
+        }
+
+        .incorrect {
+            color: #c0392b;
+        }
+
+        .partial {
+            color: #f39c12;
+        }
+
+        /* Pradinis ekranas */
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(44, 62, 80, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        #start-screen h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        #start-screen h2 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            margin-top: 0px;
+        }
+
+        #start-screen p {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        .exam-options {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 600px;
+        }
+
+        .exam-btn {
+            background-color: #e74c3c;
+            padding: 15px 30px;
+            font-size: 1.1em;
+        }
+
+        .exam-btn:hover {
+            background-color: #c0392b;
+        }
+
+        /* Objektų tipų pasirinkimas */
+        .type-selection {
+            max-width: 700px;
+            margin: 20px auto;
+        }
+
+        .type-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 25px;
+            margin-bottom: 20px;
+        }
+
+        .type-checkbox {
+            display: none;
+        }
+
+        .type-label {
+            padding: 12px;
+            background-color: #34495e;
+            border: 2px solid #34495e;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .type-label:hover {
+            background-color: #4a5f7f;
+        }
+
+        .type-checkbox:checked+.type-label {
+            background-color: #27ae60;
+            border-color: #27ae60;
+        }
+
+        .select-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .select-btn {
+            background-color: #7f8c8d;
+            padding: 8px 16px;
+            font-size: 0.9em;
+        }
+
+        .select-btn:hover {
+            background-color: #95a5a6;
+        }
+
+        /* Rezultatų lentelė */
+        #results-table {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            color: #2c3e50;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        #results-table h2 {
+            margin: 0 0 15px 0;
+            font-size: 2em;
+            text-align: center;
+        }
+
+        #results-table h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.2em;
+            text-align: center;
+        }
+
+        #results-table .table-wrapper {
+            max-height: 50vh;
+            overflow-y: auto;
+            margin: 15px 0;
+        }
+
+        #results-table table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95em;
+        }
+
+        #results-table th,
+        #results-table td {
+            padding: 8px 6px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        #results-table th {
+            background-color: #34495e;
+            color: white;
+            position: sticky;
+            top: 0;
+        }
+
+        #results-table .gif-container {
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        #results-table .btn-container {
+            margin-top: 15px;
+            text-align: center;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .grade-excellent {
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .grade-good {
+            color: #f39c12;
+            font-weight: bold;
+        }
+
+        .grade-fail {
+            color: #c0392b;
+            font-weight: bold;
+        }
+
+        .nav-back {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #ecf0f1;
+            background: #34495e;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+
+        .nav-back:hover {
+            background: #4a5f7f;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="start-screen">
+        <a href="index.html" class="nav-back">&larr; Atgal į meniu</a>
+        <h1>🇱🇹 Lietuvos geografijos testas</h1>
+
+        <div class="type-selection">
+            <h2>Pasirinkite ką mokytis:</h2>
+            <div class="select-buttons">
+                <button class="btn select-btn" onclick="selectAllTypes()">✓ Visi</button>
+                <button class="btn select-btn" onclick="deselectAllTypes()">✗ Nieko</button>
+            </div>
+            <div class="type-grid">
+                <div>
+                    <input type="checkbox" id="type-upe" class="type-checkbox" checked>
+                    <label for="type-upe" class="type-label">🌊 Upės</label>
+                </div>
+                <div>
+                    <input type="checkbox" id="type-ezeras" class="type-checkbox" checked>
+                    <label for="type-ezeras" class="type-label">💧 Ežerai</label>
+                </div>
+                <div>
+                    <input type="checkbox" id="type-marios" class="type-checkbox" checked>
+                    <label for="type-marios" class="type-label">⛵ Marios</label>
+                </div>
+                <div>
+                    <input type="checkbox" id="type-aukstuma" class="type-checkbox" checked>
+                    <label for="type-aukstuma" class="type-label">⛰️ Aukštumos</label>
+                </div>
+            </div>
+        </div>
+
+        <h2>Pasirinkite testo ilgį:</h2>
+        <div class="exam-options">
+            <button class="btn exam-btn" onclick="startExam(10)">10 klausimų</button>
+            <button class="btn exam-btn" onclick="startExam(15)">15 klausimų</button>
+            <button class="btn exam-btn" onclick="startExam(20)">20 klausimų</button>
+            <button class="btn exam-btn" onclick="startExam('all')">Visi klausimai</button>
+        </div>
+    </div>
+
+    <div id="header">
+        <div>Taškai: <span id="score">0</span> / <span id="max-score">0</span></div>
+        <div class="info-panel">Klausimas <span id="question-num">1</span> / <span id="total-questions">10</span></div>
+        <div>Vidurkis: <span id="avg-score">0</span>%</div>
+    </div>
+
+    <div id="task-box">
+        <div id="question-text">Kraunama...</div>
+        <div id="feedback"></div>
+        <button id="next-btn" class="btn" onclick="nextLevel()" style="display: none;">Kitas klausimas &rarr;</button>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 1. Žemėlapio inicijavimas
+        // Centruojame ties Lietuva, zoom lygis 7
+        const map = L.map('map').setView([55.3, 23.9], 7);
+
+        // Naudojame žemėlapį be pavadinimų
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 18,
+            minZoom: 6,
+            noWrap: true
+        }).addTo(map);
+
+        const locations = [
+            // --- UPĖS ---
+            { name: "Nemunas", type: "Upė", points: [[53.94, 23.97], [54.02, 23.97], [54.11, 24.01], [54.26, 24.11], [54.40, 24.04], [54.51, 24.03], [54.60, 24.00], [54.78, 24.14], [54.82, 24.04], [54.85, 23.88], [54.91, 23.93], [55.03, 23.58], [55.08, 23.36], [55.08, 22.95], [55.07, 22.75], [55.10, 22.35], [55.20, 21.67], [55.30, 21.32]] },
+            { name: "Merkys", type: "Upė", points: [[54.34, 25.68], [54.45, 25.30], [54.43, 24.96], [54.40, 24.64], [54.20, 24.31], [54.16, 24.18]] },
+            { name: "Neris", type: "Upė", points: [[54.80, 25.75], [54.74, 25.43], [54.69, 25.28], [54.73, 25.04], [54.82, 24.83], [54.89, 24.67], [55.03, 24.36], [54.98, 24.15], [54.90, 23.88]] },
+            { name: "Šventoji", type: "Upė", points: [[55.72, 26.15], [55.64, 25.86], [55.51, 25.10], [55.33, 24.81], [55.15, 24.63], [55.08, 24.33]] },
+            { name: "Nevėžis", type: "Upė", points: [[55.57, 24.69], [55.43, 24.23], [55.29, 23.97], [55.16, 23.83], [54.93, 23.77]] },
+            { name: "Mūša", type: "Upė", points: [[56.23, 23.25], [56.16, 23.51], [56.12, 23.82], [56.09, 24.08], [56.03, 24.37]] },
+            { name: "Dubysa", type: "Upė", points: [[55.87, 23.10], [55.75, 23.01], [55.51, 23.17], [55.32, 23.40], [55.25, 23.47], [55.07, 23.44]] },
+            { name: "Venta", type: "Upė", points: [[55.77, 22.46], [55.95, 22.38], [56.10, 22.33], [56.18, 22.18], [56.33, 22.25]] },
+            { name: "Jūra", type: "Upė", points: [[55.69, 22.02], [55.60, 22.06], [55.45, 22.13], [55.29, 22.15], [55.15, 22.06], [55.05, 22.13]] },
+            { name: "Minija", type: "Upė", points: [[55.87, 21.82], [55.78, 21.57], [55.58, 21.40], [55.44, 21.43], [55.35, 21.28]] },
+
+            // --- EŽERAI ---
+            { name: "Drūkšiai", type: "Ežeras", points: [[55.62, 26.61]] },
+            { name: "Tauragnas", type: "Ežeras", points: [[55.44, 25.90]] },
+            { name: "Lakajai", type: "Ežeras", points: [[55.22, 25.74]] },
+            { name: "Dusia", type: "Ežeras", points: [[54.29, 23.68]] },
+            { name: "Žuvintas", type: "Ežeras", points: [[54.46, 23.58]] },
+            { name: "Vištytis", type: "Ežeras", points: [[54.43, 22.73]] },
+            { name: "Lūkstas", type: "Ežeras", points: [[55.71, 22.32]] },
+            { name: "Asveja", type: "Ežeras", points: [[55.03, 25.50]] },
+
+            // --- MARIOS ---
+            { name: "Kuršių marios", type: "Marios", points: [[55.44, 21.10], [55.30, 21.05], [55.15, 20.95], [54.95, 20.65], [55.55, 21.14]] },
+            { name: "Kauno marios", type: "Marios", points: [[54.88, 24.02], [54.85, 24.12], [54.82, 24.23], [54.78, 24.26]] },
+
+            // --- AUKŠTUMOS ---
+            { name: "Žemaičių aukštuma", type: "Aukštuma", points: [[55.69, 22.28]] },
+            { name: "Sūduvos aukštuma", type: "Aukštuma", points: [[54.43, 23.23]] },
+            { name: "Dzūkų aukštuma", type: "Aukštuma", points: [[54.29, 24.47]] },
+            { name: "Medininkų aukštuma", type: "Aukštuma", points: [[54.55, 25.64]] },
+            { name: "Aukštaičių aukštuma", type: "Aukštuma", points: [[55.49, 25.53]] }
+        ];
+
+        let currentIdx = 0;
+        let score = 0;
+        let maxScore = 0;
+        let isAnswered = false;
+        let activeMarkers = [];
+        let examQuestions = [];
+        let totalQuestions = 10;
+        let results = []; // Saugome kiekvieno klausimo rezultatus
+        let startTime = null; // Testo pradžios laikas
+
+        const questionText = document.getElementById("question-text");
+        const feedbackText = document.getElementById("feedback");
+        const nextBtn = document.getElementById("next-btn");
+        const scoreEl = document.getElementById("score");
+        const maxScoreEl = document.getElementById("max-score");
+        const questionNumEl = document.getElementById("question-num");
+        const totalQuestionsEl = document.getElementById("total-questions");
+        const avgScoreEl = document.getElementById("avg-score");
+
+        // Funkcijos tipų pasirinkimui
+        function selectAllTypes() {
+            document.querySelectorAll('.type-checkbox').forEach(cb => cb.checked = true);
+        }
+
+        function deselectAllTypes() {
+            document.querySelectorAll('.type-checkbox').forEach(cb => cb.checked = false);
+        }
+
+        // Funkcija gauti pasirinktus tipus
+        function getSelectedTypes() {
+            const typeMap = {
+                'type-upe': 'Upė',
+                'type-ezeras': 'Ežeras',
+                'type-marios': 'Marios',
+                'type-aukstuma': 'Aukštuma'
+            };
+
+            const selected = [];
+            for (const [id, type] of Object.entries(typeMap)) {
+                if (document.getElementById(id).checked) {
+                    selected.push(type);
+                }
+            }
+            return selected;
+        }
+
+        // Funkcija pradėti egzaminą
+        function startExam(numQuestions) {
+            // Gauti pasirinktus tipus
+            const selectedTypes = getSelectedTypes();
+
+            if (selectedTypes.length === 0) {
+                alert('Pasirinkite bent vieną objekto tipą!');
+                return;
+            }
+
+            // Filtruoti vietoves pagal pasirinktus tipus
+            const filteredLocations = locations.filter(loc => selectedTypes.includes(loc.type));
+
+            if (filteredLocations.length === 0) {
+                alert('Nėra vietovių su pasirinktais tipais!');
+                return;
+            }
+
+            // Nustatyti klausimų skaičių
+            if (numQuestions === 'all') {
+                totalQuestions = filteredLocations.length;
+            } else {
+                totalQuestions = Math.min(numQuestions, filteredLocations.length);
+            }
+
+            // Išmaišome ir paimame reikiamą kiekį klausimų
+            const shuffled = [...filteredLocations].sort(() => Math.random() - 0.5);
+            examQuestions = shuffled.slice(0, totalQuestions);
+
+            // Paslėpti pradžios ekraną
+            document.getElementById("start-screen").style.display = "none";
+
+            // Atnaujinti UI
+            totalQuestionsEl.innerText = totalQuestions;
+            maxScoreEl.innerText = totalQuestions * 100;
+
+            // Pradėti laikmatį
+            startTime = new Date();
+
+            // Pradėti pirmą klausimą
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentIdx >= examQuestions.length) {
+                endGame();
+                return;
+            }
+
+            const loc = examQuestions[currentIdx];
+            questionText.innerHTML = `Rask šią vietą: <span class="target-name">${loc.name}</span> (${loc.type})`;
+            feedbackText.innerHTML = "Spustelėk žemėlapyje";
+            feedbackText.className = "";
+            nextBtn.style.display = "none";
+            isAnswered = false;
+
+            // Atnaujinti klausimo numerį
+            questionNumEl.innerText = currentIdx + 1;
+
+            // Išvalome senus markerius
+            activeMarkers.forEach(layer => map.removeLayer(layer));
+            activeMarkers = [];
+        }
+
+        function calculatePoints(distance, type) {
+            const km = distance / 1000;
+            let multiplier = 1;
+
+            if (type === 'Marios') multiplier = 1.5;
+            if (type === 'Upė') multiplier = 1.2;
+            if (type === 'Aukštuma') multiplier = 4.0; // Aukštumos labai didelės teritorijos
+
+            if (km <= 8 * multiplier) return 100;
+            if (km <= 15 * multiplier) return 90;
+            if (km <= 25 * multiplier) return 80;
+            if (km <= 40 * multiplier) return 60;
+            if (km <= 60 * multiplier) return 40;
+            if (km <= 80 * multiplier) return 20;
+            if (km <= 100 * multiplier) return 5;
+            return 0;
+        }
+
+        // Paspaudimo logika
+        map.on('click', function (e) {
+            if (isAnswered) return;
+
+            isAnswered = true;
+            const target = examQuestions[currentIdx];
+            const clickLatLng = e.latlng;
+
+            // Pavaizduojame kur paspaudė vartotojas
+            const userMarker = L.marker(clickLatLng).addTo(map).bindPopup("Tavo spėjimas").openPopup();
+            activeMarkers.push(userMarker);
+
+            let earnedPoints = 0;
+            let distance = Infinity;
+            let closestPoint = null;
+
+            // Ieškos artimiausio taško iš target
+            if (target.points) {
+                target.points.forEach(point => {
+                    const polyPoint = L.latLng(point[0], point[1]);
+                    const dist = clickLatLng.distanceTo(polyPoint);
+                    if (dist < distance) {
+                        distance = dist;
+                        closestPoint = polyPoint;
+                    }
+                });
+
+                // Vizualizacija nupiešiama pagal tipą
+                if (target.type === 'Upė' || target.type === 'Marios') {
+                    const polyline = L.polyline(target.points, { color: '#27ae60', weight: 5, opacity: 0.8 }).addTo(map).bindPopup(target.name);
+                    activeMarkers.push(polyline);
+                }
+
+                // Pažymim artimiausią rastą tašką
+                const correctMarker = L.circleMarker(closestPoint, {
+                    color: '#27ae60',
+                    radius: 8,
+                    fillOpacity: 1
+                }).addTo(map).bindPopup(target.name);
+                activeMarkers.push(correctMarker);
+
+                // Nupiešiam linija nuo paspaudimo ik artimiausio taško
+                const line = L.polyline([clickLatLng, closestPoint], { color: '#3498db', dashArray: '5, 10' }).addTo(map);
+                activeMarkers.push(line);
+
+                // Taškų skaičiavimas 
+                earnedPoints = calculatePoints(distance, target.type);
+                const km = (distance / 1000).toFixed(0);
+
+                if (earnedPoints === 100) {
+                    feedbackText.innerHTML = `🎯 Puikiai! Atstumas ${km} km. (+${earnedPoints} tšk.)`;
+                    feedbackText.className = "correct";
+                } else if (earnedPoints >= 40) {
+                    feedbackText.innerHTML = `📍 Visai neblogai! Nutolęs ${km} km nuo ${target.name}. (+${earnedPoints} tšk.)`;
+                    feedbackText.className = "partial";
+                } else {
+                    feedbackText.innerHTML = `❌ Per toli - ${km} km nuo ${target.name}. (+${earnedPoints} tšk.)`;
+                    feedbackText.className = "incorrect";
+                }
+            }
+
+            // Saugome rezultatą
+            results.push({
+                location: target.name,
+                type: target.type,
+                points: earnedPoints,
+                distance: distance ? (distance / 1000).toFixed(0) : 0,
+                isInside: earnedPoints === 100
+            });
+
+            // Atnaujinti taškus
+            score += earnedPoints;
+            maxScore += 100;
+            scoreEl.innerText = Math.round(score);
+            maxScoreEl.innerText = maxScore;
+
+            // Skaičiuoti vidurkį
+            const avg = (score / maxScore * 100).toFixed(1);
+            avgScoreEl.innerText = avg;
+
+            nextBtn.style.display = "inline-block";
+        });
+
+        function nextLevel() {
+            currentIdx++;
+            showQuestion();
+        }
+
+        function endGame() {
+            // Apskaičiuoti praleistą laiką
+            const elapsedTime = new Date() - startTime;
+            const totalSeconds = Math.floor(elapsedTime / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const timeString = `${minutes}min ${seconds}s`;
+
+            const percentage = (score / maxScore * 100).toFixed(1);
+            let grade = "";
+            let gradeClass = "";
+
+            if (percentage >= 90) {
+                grade = "PUIKIAI! 🌟";
+                gradeClass = "grade-excellent";
+            } else if (percentage >= 75) {
+                grade = "GERAI! ✓";
+                gradeClass = "grade-good";
+            } else if (percentage >= 50) {
+                grade = "PATENKINAMAI";
+                gradeClass = "grade-good";
+            } else {
+                grade = "NEPAKANKA";
+                gradeClass = "grade-fail";
+            }
+
+            // GIF'ai pagal rezultatą (Paprastesnis variantas be papildomų if/else, kad taupytų vietą kode)
+            let celebrationGif = "";
+            if (percentage > 94) {
+                celebrationGif = `<div class="tenor-gif-embed" data-postid="14121539344197617839" data-share-method="host" data-aspect-ratio="1" data-width="40%"><a href="https://tenor.com/view/good-job-gif-14121539344197617839">Good Job</a></div>`;
+            } else if (percentage < 30) {
+                celebrationGif = `<div class="tenor-gif-embed" data-postid="1975526499861417359" data-share-method="host" data-aspect-ratio="1" data-width="40%"><a href="https://tenor.com/view/sad-gif-1975526499861417359">Sad</a></div>`;
+            }
+
+            if (celebrationGif !== "" && !document.getElementById('tenor-embed-script')) {
+                const script = document.createElement('script');
+                script.id = 'tenor-embed-script';
+                script.type = 'text/javascript';
+                script.async = true;
+                script.src = 'https://tenor.com/embed.js';
+                document.body.appendChild(script);
+            }
+
+            // Sukurti rezultatų lentelę
+            let tableHTML = `
+            <h2 class="${gradeClass}">${grade}</h2>
+            <h3>Galutinis rezultatas: ${Math.round(score)} / ${maxScore} (${percentage}%)</h3>
+            <h3>Laikas: ${timeString}</h3>
+            <div class="btn-container">
+                <button class="btn btn-secondary" onclick="location.reload()">🔄 Naujas testas</button>
+                <a href="index.html" class="btn btn-secondary" style="text-decoration:none;">🏠 Į pradinį meniu</a>
+            </div>
+            <div class="gif-container">${celebrationGif}</div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Vietovė</th>
+                            <th>Tipas</th>
+                            <th>Taškai</th>
+                            <th>Nutolimas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+            results.forEach((result, idx) => {
+                const pointClass = result.points >= 90 ? 'correct' : (result.points > 0 ? 'partial' : 'incorrect');
+                tableHTML += `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${result.location}</td>
+                    <td>${result.type}</td>
+                    <td class="${pointClass}">${result.points}/100</td>
+                    <td>${result.isInside ? '✓ Nežymus (' + result.distance + ' km)' : result.distance + ' km'}</td>
+                </tr>
+            `;
+            });
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+            // Paslėpti žemėlapį ir task-box, rodyti rezultatus full screen
+            document.getElementById('map').style.display = 'none';
+            document.getElementById('task-box').style.display = 'none';
+            document.getElementById('header').style.display = 'none';
+
+            // Sukurti full screen rezultatų langą
+            const resultsContainer = document.createElement('div');
+            resultsContainer.id = 'results-container';
+            resultsContainer.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(44, 62, 80, 0.95); z-index: 2000; overflow-y: auto; padding: 20px; box-sizing: border-box;';
+            resultsContainer.innerHTML = `<div id="results-table">${tableHTML}</div>`;
+            document.body.appendChild(resultsContainer);
+        }
+
+    </script>
+
+</body>
+
+</html>
