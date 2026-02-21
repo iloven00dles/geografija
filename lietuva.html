@@ -349,7 +349,8 @@
     <div id="task-box">
         <div id="question-text">Kraunama...</div>
         <div id="feedback"></div>
-        <button id="next-btn" class="btn" onclick="nextLevel()" style="display: none;">Kitas klausimas &rarr;</button>
+        <button id="next-btn" class="btn" onclick="nextLevel()" style="display: none; margin-top: 10px;">Kitas klausimas
+            &rarr;</button>
     </div>
 
     <div id="map"></div>
@@ -357,17 +358,11 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         // 1. Žemėlapio inicijavimas
-        // Centruojame ties Lietuva, zoom lygis 7
         const map = L.map('map').setView([55.3, 23.9], 7);
 
-        // Naudojame žemėlapį be pavadinimų
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
-            maxZoom: 18,
-            minZoom: 6,
-            noWrap: true
-        }).addTo(map);
+        // Paveiksliuko žemėlapis (Image Overlay). Jei proporcijos netikslios, pareguliuokite šios koordinates.
+        const customMapBounds = [[53.85, 20.90], [56.48, 26.85]];
+        const customMapImage = L.imageOverlay('image.png', customMapBounds).addTo(map);
 
         const locations = [
             // --- UPĖS ---
@@ -397,11 +392,11 @@
             { name: "Kauno marios", type: "Marios", points: [[54.88, 24.02], [54.85, 24.12], [54.82, 24.23], [54.78, 24.26]] },
 
             // --- AUKŠTUMOS ---
-            { name: "Žemaičių aukštuma", type: "Aukštuma", points: [[55.69, 22.28]] },
-            { name: "Sūduvos aukštuma", type: "Aukštuma", points: [[54.43, 23.23]] },
-            { name: "Dzūkų aukštuma", type: "Aukštuma", points: [[54.29, 24.47]] },
-            { name: "Medininkų aukštuma", type: "Aukštuma", points: [[54.55, 25.64]] },
-            { name: "Aukštaičių aukštuma", type: "Aukštuma", points: [[55.49, 25.53]] }
+            { name: "Žemaičių aukštuma", type: "Aukštuma", polygon: [[56.1, 21.6], [56.2, 22.6], [55.7, 23.0], [55.4, 22.7], [55.5, 21.8], [55.8, 21.5]] },
+            { name: "Sūduvos aukštuma", type: "Aukštuma", polygon: [[54.8, 22.8], [54.7, 23.7], [54.3, 23.5], [54.3, 22.7]] },
+            { name: "Dzūkų aukštuma", type: "Aukštuma", polygon: [[54.5, 23.8], [54.5, 24.5], [53.9, 24.8], [53.9, 23.7]] },
+            { name: "Medininkų aukštuma", type: "Aukštuma", polygon: [[54.7, 25.3], [54.7, 25.8], [54.4, 25.8], [54.4, 25.4]] },
+            { name: "Aukštaičių aukštuma", type: "Aukštuma", polygon: [[55.9, 24.8], [56.0, 26.2], [55.2, 26.5], [54.9, 25.7], [55.0, 24.9]] }
         ];
 
         let currentIdx = 0;
@@ -532,6 +527,19 @@
             return 0;
         }
 
+        function isPointInPolygon(point, polygon) {
+            let x = point.lat, y = point.lng;
+            let inside = false;
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                let xi = polygon[i][0], yi = polygon[i][1];
+                let xj = polygon[j][0], yj = polygon[j][1];
+                let intersect = ((yi > y) !== (yj > y))
+                    && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
         // Paspaudimo logika
         map.on('click', function (e) {
             if (isAnswered) return;
@@ -547,9 +555,61 @@
             let earnedPoints = 0;
             let distance = Infinity;
             let closestPoint = null;
+            let isInside = false;
 
-            // Ieškos artimiausio taško iš target
-            if (target.points) {
+            // Ar tai buvo poligonas (aukštuma, žemuma)
+            if (target.polygon) {
+                isInside = isPointInPolygon(clickLatLng, target.polygon);
+
+                if (!isInside) {
+                    target.polygon.forEach(point => {
+                        const polyPoint = L.latLng(point[0], point[1]);
+                        const dist = clickLatLng.distanceTo(polyPoint);
+                        if (dist < distance) {
+                            distance = dist;
+                            closestPoint = polyPoint;
+                        }
+                    });
+                } else {
+                    distance = 0;
+                }
+
+                // Vizualizuojame plotą
+                const polygonLayer = L.polygon(target.polygon, {
+                    color: isInside ? '#27ae60' : (distance < 25000 ? '#f39c12' : '#c0392b'),
+                    fillColor: isInside ? '#27ae60' : (distance < 25000 ? '#f39c12' : '#c0392b'),
+                    fillOpacity: 0.4
+                }).addTo(map).bindPopup(target.name);
+                activeMarkers.push(polygonLayer);
+
+                // Jeigu neviduje, žymime rodykle
+                if (!isInside && closestPoint) {
+                    const line = L.polyline([clickLatLng, closestPoint], { color: '#3498db', dashArray: '5, 10' }).addTo(map);
+                    activeMarkers.push(line);
+                }
+
+                if (isInside) {
+                    earnedPoints = 100;
+                } else {
+                    earnedPoints = calculatePoints(distance, target.type);
+                }
+
+                const km = (distance / 1000).toFixed(0);
+
+                if (isInside || earnedPoints === 100) {
+                    feedbackText.innerHTML = `🎯 Puiku! Pataikei į ${target.name}! (+${earnedPoints} tšk.)`;
+                    feedbackText.className = "correct";
+                } else if (earnedPoints >= 40) {
+                    feedbackText.innerHTML = `📍 Visai neblogai! Nutolęs ${km} km nuo ${target.name}. (+${earnedPoints} tšk.)`;
+                    feedbackText.className = "partial";
+                } else {
+                    feedbackText.innerHTML = `❌ Per toli - ${km} km nuo ${target.name}. (+${earnedPoints} tšk.)`;
+                    feedbackText.className = "incorrect";
+                }
+
+            }
+            // Visi kiti (Upės, ežerai, marios) kuriems reikia surasti atstumą iki linijos/taškų
+            else if (target.points) {
                 target.points.forEach(point => {
                     const polyPoint = L.latLng(point[0], point[1]);
                     const dist = clickLatLng.distanceTo(polyPoint);
@@ -599,7 +659,7 @@
                 type: target.type,
                 points: earnedPoints,
                 distance: distance ? (distance / 1000).toFixed(0) : 0,
-                isInside: earnedPoints === 100
+                isInside: isInside || earnedPoints === 100
             });
 
             // Atnaujinti taškus
