@@ -13,7 +13,7 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lietuvos geografijos testas</title>
+    <title>Lietuvos geografijos testas (Rašymas)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body {
@@ -141,6 +141,24 @@
             flex-wrap: wrap;
             justify-content: center;
             max-width: 600px;
+        }
+
+        @keyframes pulse-animation {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .pulse-marker {
+            animation: pulse-animation 1.5s infinite ease-in-out;
         }
 
         .exam-btn {
@@ -303,13 +321,13 @@
 
     <div id="start-screen">
         <a href="index.html" class="nav-back">&larr; Atgal į meniu</a>
-        <h1>🇱🇹 Lietuvos geografijos testas</h1>
+        <h1>🇱🇹 Lietuvos geografijos testas (Rašymas)</h1>
 
         <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-            <a href="lietuva.html" class="btn"
-                style="text-decoration: none; font-size: 1.2em; padding: 10px 30px; background-color: #27ae60;">Spaudyti</a>
-            <a href="lietuva-rasyti.html" class="btn btn-secondary"
-                style="text-decoration: none; font-size: 1.2em; padding: 10px 30px;">Rašyti</a>
+            <a href="lietuva.html" class="btn btn-secondary"
+                style="text-decoration: none; font-size: 1.2em; padding: 10px 30px;">Spaudyti</a>
+            <a href="lietuva-rasyti.html" class="btn"
+                style="text-decoration: none; font-size: 1.2em; padding: 10px 30px; background-color: #27ae60;">Rašyti</a>
         </div>
 
         <div class="type-selection">
@@ -355,6 +373,11 @@
 
     <div id="task-box">
         <div id="question-text">Kraunama...</div>
+        <div id="input-area" style="margin-top: 15px; display: none;">
+            <input type="text" id="answer-input" placeholder="Įveskite pavadinimą..."
+                style="padding: 10px; font-size: 1.1em; width: 60%; border-radius: 5px; border: 1px solid #ccc; max-width: 300px;">
+            <button id="submit-btn" class="btn" onclick="checkAnswer()">Spėti</button>
+        </div>
         <div id="feedback"></div>
         <button id="next-btn" class="btn" onclick="nextLevel()" style="display: none; margin-top: 10px;">Kitas klausimas
             &rarr;</button>
@@ -550,6 +573,18 @@
             showQuestion();
         }
 
+        function removeDiacritics(str) {
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        }
+
+        // Prijungiame enter mygtuką
+        document.getElementById("answer-input").addEventListener("keypress", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                checkAnswer();
+            }
+        });
+
         function showQuestion() {
             if (currentIdx >= examQuestions.length) {
                 endGame();
@@ -557,10 +592,14 @@
             }
 
             const loc = examQuestions[currentIdx];
-            questionText.innerHTML = `Rask šią vietą: <span class="target-name">${loc.name}</span> (${loc.type})`;
-            feedbackText.innerHTML = "Spustelėk žemėlapyje";
+            questionText.innerHTML = `Kas tai per vieta? Tipas: <span class="target-name">${loc.type}</span>`;
+            feedbackText.innerHTML = "";
             feedbackText.className = "";
             nextBtn.style.display = "none";
+            document.getElementById("input-area").style.display = "block";
+            const inputEl = document.getElementById("answer-input");
+            inputEl.value = "";
+            inputEl.focus();
             isAnswered = false;
 
             // Atnaujinti klausimo numerį
@@ -569,159 +608,83 @@
             // Išvalome senus markerius
             activeMarkers.forEach(layer => map.removeLayer(layer));
             activeMarkers = [];
-        }
 
-        function calculatePoints(distance, type) {
-            const km = distance / 1000;
-            let multiplier = 1;
-
-            if (type === 'Marios') multiplier = 1.5;
-            if (type === 'Upė') multiplier = 1.2;
-            if (type === 'Aukštuma') multiplier = 4.0; // Aukštumos labai didelės teritorijos
-
-            if (km <= 8 * multiplier) return 100;
-            if (km <= 15 * multiplier) return 90;
-            if (km <= 25 * multiplier) return 80;
-            if (km <= 40 * multiplier) return 60;
-            if (km <= 60 * multiplier) return 40;
-            if (km <= 80 * multiplier) return 20;
-            if (km <= 100 * multiplier) return 5;
-            return 0;
-        }
-
-        function isPointInPolygon(point, polygon) {
-            let x = point.lat, y = point.lng;
-            let inside = false;
-            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-                let xi = polygon[i][0], yi = polygon[i][1];
-                let xj = polygon[j][0], yj = polygon[j][1];
-                let intersect = ((yi > y) !== (yj > y))
-                    && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-                if (intersect) inside = !inside;
-            }
-            return inside;
-        }
-
-        // Paspaudimo logika
-        map.on('click', function (e) {
-            if (isAnswered) return;
-
-            isAnswered = true;
-            const target = examQuestions[currentIdx];
-            const clickLatLng = e.latlng;
-
-            // Pavaizduojame kur paspaudė vartotojas
-            const userMarker = L.marker(clickLatLng).addTo(map).bindPopup("Tavo spėjimas").openPopup();
-            activeMarkers.push(userMarker);
-
-            let earnedPoints = 0;
-            let distance = Infinity;
-            let closestPoint = null;
-            let isInside = false;
-
-            // Ar tai buvo poligonas (aukštuma, žemuma)
-            if (target.polygon) {
-                isInside = isPointInPolygon(clickLatLng, target.polygon);
-
-                if (!isInside) {
-                    target.polygon.forEach(point => {
-                        const polyPoint = L.latLng(point[0], point[1]);
-                        const dist = clickLatLng.distanceTo(polyPoint);
-                        if (dist < distance) {
-                            distance = dist;
-                            closestPoint = polyPoint;
-                        }
-                    });
-                } else {
-                    distance = 0;
-                }
-
-                // Vizualizuojame plotą
-                const polygonLayer = L.polygon(target.polygon, {
-                    color: isInside ? '#27ae60' : (distance < 25000 ? '#f39c12' : '#c0392b'),
-                    fillColor: isInside ? '#27ae60' : (distance < 25000 ? '#f39c12' : '#c0392b'),
-                    fillOpacity: 0.4
-                }).addTo(map).bindPopup(target.name);
+            // Render the location on the map in pink!
+            if (loc.polygon) {
+                const polygonLayer = L.polygon(loc.polygon, {
+                    color: '#ff1493',
+                    fillColor: '#ff1493',
+                    fillOpacity: 0.5,
+                    className: 'pulse-marker'
+                }).addTo(map);
                 activeMarkers.push(polygonLayer);
-
-                // Jeigu neviduje, žymime rodykle
-                if (!isInside && closestPoint) {
-                    const line = L.polyline([clickLatLng, closestPoint], { color: '#3498db', dashArray: '5, 10' }).addTo(map);
-                    activeMarkers.push(line);
-                }
-
-                if (isInside) {
-                    earnedPoints = 100;
+            } else if (loc.points) {
+                if (loc.type === 'Ežeras') {
+                    const marker = L.circleMarker(loc.points[0], {
+                        color: '#ff1493',
+                        fillColor: '#ff1493',
+                        fillOpacity: 0.8,
+                        radius: 10,
+                        className: 'pulse-marker'
+                    }).addTo(map);
+                    activeMarkers.push(marker);
                 } else {
-                    earnedPoints = calculatePoints(distance, target.type);
-                }
-
-                const km = (distance / 1000).toFixed(0);
-
-                if (isInside || earnedPoints === 100) {
-                    feedbackText.innerHTML = `🎯 Puiku! Pataikei į ${target.name}! (+${earnedPoints} tšk.)`;
-                    feedbackText.className = "correct";
-                } else if (earnedPoints >= 40) {
-                    feedbackText.innerHTML = `📍 Visai neblogai! Nutolęs ${km} km nuo ${target.name}. (+${earnedPoints} tšk.)`;
-                    feedbackText.className = "partial";
-                } else {
-                    feedbackText.innerHTML = `❌ Per toli - ${km} km nuo ${target.name}. (+${earnedPoints} tšk.)`;
-                    feedbackText.className = "incorrect";
-                }
-
-            }
-            // Visi kiti (Upės, ežerai, marios) kuriems reikia surasti atstumą iki linijos/taškų
-            else if (target.points) {
-                target.points.forEach(point => {
-                    const polyPoint = L.latLng(point[0], point[1]);
-                    const dist = clickLatLng.distanceTo(polyPoint);
-                    if (dist < distance) {
-                        distance = dist;
-                        closestPoint = polyPoint;
-                    }
-                });
-
-                // Vizualizacija nupiešiama pagal tipą
-                if (target.type === 'Upė' || target.type === 'Marios') {
-                    const polyline = L.polyline(target.points, { color: '#27ae60', weight: 5, opacity: 0.8 }).addTo(map).bindPopup(target.name);
+                    const polyline = L.polyline(loc.points, { color: '#ff1493', weight: 6, opacity: 0.8, className: 'pulse-marker' }).addTo(map);
                     activeMarkers.push(polyline);
                 }
-
-                // Pažymim artimiausią rastą tašką
-                const correctMarker = L.circleMarker(closestPoint, {
-                    color: '#27ae60',
-                    radius: 8,
-                    fillOpacity: 1
-                }).addTo(map).bindPopup(target.name);
-                activeMarkers.push(correctMarker);
-
-                // Nupiešiam linija nuo paspaudimo ik artimiausio taško
-                const line = L.polyline([clickLatLng, closestPoint], { color: '#3498db', dashArray: '5, 10' }).addTo(map);
-                activeMarkers.push(line);
-
-                // Taškų skaičiavimas 
-                earnedPoints = calculatePoints(distance, target.type);
-                const km = (distance / 1000).toFixed(0);
-
-                if (earnedPoints === 100) {
-                    feedbackText.innerHTML = `🎯 Puikiai! Atstumas ${km} km. (+${earnedPoints} tšk.)`;
-                    feedbackText.className = "correct";
-                } else if (earnedPoints >= 40) {
-                    feedbackText.innerHTML = `📍 Visai neblogai! Nutolęs ${km} km nuo ${target.name}. (+${earnedPoints} tšk.)`;
-                    feedbackText.className = "partial";
-                } else {
-                    feedbackText.innerHTML = `❌ Per toli - ${km} km nuo ${target.name}. (+${earnedPoints} tšk.)`;
-                    feedbackText.className = "incorrect";
-                }
             }
+        }
+
+        function checkAnswer() {
+            if (isAnswered) return;
+
+            const target = examQuestions[currentIdx];
+            const userInput = document.getElementById("answer-input").value.trim();
+
+            if (userInput === "") return;
+
+            isAnswered = true;
+            document.getElementById("input-area").style.display = "none";
+
+            // Normalizuojame atsakymus (pašaliname lietuviškas raides ir padarome mažosiomis)
+            const normalizedTarget = removeDiacritics(target.name);
+            const normalizedInput = removeDiacritics(userInput);
+
+            let earnedPoints = 0;
+            let isInside = false;
+
+            if (normalizedInput === normalizedTarget) {
+                earnedPoints = 100;
+                isInside = true;
+                feedbackText.innerHTML = `🎯 Puiku! Tai yra ${target.name}! (+100 tšk.)`;
+                feedbackText.className = "correct";
+            } else {
+                earnedPoints = 0;
+                isInside = false;
+                feedbackText.innerHTML = `❌ Neteisingai! Tai yra ${target.name}. (+0 tšk.)`;
+                feedbackText.className = "incorrect";
+            }
+
+            // Pakeičiame spalvą į žalią / raudoną ir nuimame pulsavimą
+            activeMarkers.forEach(layer => {
+                let el = layer.getElement();
+                if (el) {
+                    el.classList.remove('pulse-marker');
+                }
+                layer.setStyle({
+                    color: isInside ? '#27ae60' : '#c0392b',
+                    fillColor: isInside ? '#27ae60' : '#c0392b'
+                });
+                layer.bindPopup(target.name).openPopup();
+            });
 
             // Saugome rezultatą
             results.push({
                 location: target.name,
                 type: target.type,
                 points: earnedPoints,
-                distance: distance ? (distance / 1000).toFixed(0) : 0,
-                isInside: isInside || earnedPoints === 100
+                distance: isInside ? "0" : "N/A",
+                isInside: isInside
             });
 
             // Atnaujinti taškus
@@ -735,7 +698,7 @@
             avgScoreEl.innerText = avg;
 
             nextBtn.style.display = "inline-block";
-        });
+        }
 
         function nextLevel() {
             currentIdx++;
